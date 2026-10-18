@@ -1,0 +1,10 @@
+[Unit]
+Description=Raspberry Pi weekly maintenance (apt updates + docker image pulls)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/pi-maintenance
+ExecStart=/opt/maintenance/pi-maintenance.sh
+TimeoutStartSec=2h

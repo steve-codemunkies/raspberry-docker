@@ -4,6 +4,7 @@ This directory contains the configuration for a comprehensive network monitoring
 - Prometheus (metrics collection and storage)
 - Node Exporter (system metrics collection)
 - Grafana (visualization and dashboards)
+- Loki (log storage; receives logs from the [maintenance script](../maintenance/) and is queried from Grafana)
 
 ## Setup Instructions
 
@@ -18,7 +19,7 @@ This directory contains the configuration for a comprehensive network monitoring
    ```bash
    sudo mkdir -p /opt/stacks/monitoring
    sudo cp docker-compose.yml .env /opt/stacks/monitoring/
-   sudo cp -r prometheus /opt/stacks/monitoring/
+   sudo cp -r prometheus loki grafana /opt/stacks/monitoring/
    ```
 
 4. Start the monitoring stack:
@@ -34,6 +35,8 @@ This directory contains the configuration for a comprehensive network monitoring
 
 - Prometheus will be available at https://your-prometheus-domain
 
+- Loki listens on `127.0.0.1:3100` on the Pi only (not exposed to the network).
+
 ## Initial Grafana Setup
 
 1. Log in to Grafana
@@ -41,6 +44,7 @@ This directory contains the configuration for a comprehensive network monitoring
    - URL: http://prometheus:9090
    - Access: Server (default)
 3. Import dashboard 1860 for Node Exporter metrics
+4. The Loki data source (http://loki:3100) is provisioned automatically. View logs under Explore > Loki, e.g. `{job="pi-maintenance"}`.
 
 ## Metrics Available
 

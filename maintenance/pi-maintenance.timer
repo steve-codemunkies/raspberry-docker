@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Raspberry Pi maintenance every Sunday at 03:00
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00
+Persistent=true
+Unit=pi-maintenance.service
+
+[Install]
+WantedBy=timers.target
