@@ -14,6 +14,8 @@ LOG_FILE="${LOG_FILE:-/var/log/pi-maintenance.log}"
 LOCK_FILE="${LOCK_FILE:-/run/lock/pi-maintenance.lock}"
 RECREATE_CONTAINERS="${RECREATE_CONTAINERS:-true}"   # run 'up -d' after pulling
 PRUNE_IMAGES="${PRUNE_IMAGES:-true}"                 # remove dangling images afterwards
+AUTO_REBOOT="${AUTO_REBOOT:-false}"                  # reboot after updates if one is required
+REBOOT_DELAY_MINUTES="${REBOOT_DELAY_MINUTES:-2}"    # delay before the scheduled reboot
 HOST_NAME="$(hostname)"
 FAILURES=0
 
@@ -84,7 +86,12 @@ run_step apt-upgrade      apt-get "${APT_OPTS[@]}" upgrade
 run_step apt-autoremove   apt-get "${APT_OPTS[@]}" autoremove --purge
 
 if [[ -f /var/run/reboot-required ]]; then
-  log warning "A reboot is required to finish applying updates (not rebooting automatically)."
+  if [[ "$AUTO_REBOOT" == "true" && $FAILURES -eq 0 ]]; then
+    log warning "Reboot required; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
+    shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance after updates"
+  else
+    log warning "A reboot is required to finish applying updates (not rebooting automatically)."
+  fi
 fi
 
 # --- Docker images ----------------------------------------------------------
