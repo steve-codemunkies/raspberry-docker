@@ -7,13 +7,14 @@ An unattended script that, every Sunday at 03:00:
 3. Pulls updated Docker images for every stack in `/opt/stacks/*` and recreates changed containers
 
 Output is written to `/var/log/pi-maintenance.log` **and** pushed to Loki, so it can be viewed in Grafana.
-The script does not reboot the Pi; if a reboot is needed it logs a warning.
+By default the script does not reboot the Pi; if a reboot is needed it logs a warning. Automatic reboot is opt-in via `AUTO_REBOOT=true`.
 
 ## Prerequisites
 
 * Docker installed (see [docker-install](../docker-install/))
 * The [monitoring stack](../monitoring/) deployed to `/opt/stacks/monitoring`, **including Loki** (added to the monitoring compose file). Grafana does not store logs itself; Loki does, and Grafana queries it.
 * `curl` and `flock` (both present on Raspberry Pi OS)
+* No reboot is performed unless you explicitly enable `AUTO_REBOOT` (default `false`)
 
 ## Permissions
 
@@ -74,6 +75,16 @@ Optional overrides go in `/etc/default/pi-maintenance` (read by the service) or 
 | `RECREATE_CONTAINERS` | `true` | Run `docker compose up -d` after pulling so new images are used |
 | `PRUNE_IMAGES` | `true` | Remove dangling images afterwards |
 | `LOG_FILE` | `/var/log/pi-maintenance.log` | Local log file |
+| `AUTO_REBOOT` | `false` | Schedule a reboot after maintenance when updates require one |
+| `REBOOT_DELAY_MINUTES` | `2` | Minutes to wait before the scheduled reboot |
+
+To enable automatic reboots, add to `/etc/default/pi-maintenance`:
+```bash
+AUTO_REBOOT=true
+REBOOT_DELAY_MINUTES=2
+```
+
+Safeguard: a reboot is only scheduled when updates indicate a reboot is required (`/var/run/reboot-required` exists) and the maintenance run recorded no failed steps. Otherwise only a warning is logged.
 
 ## Viewing logs in Grafana
 
