@@ -5,3 +5,4 @@
 * [PiHole](./pihole/)
 * [Network Monitoring](./monitoring/)
 * [Weekly maintenance (updates + image pulls)](./maintenance/)
+* [Router Interface Proxy](./router-proxy/)
