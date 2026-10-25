@@ -115,7 +115,7 @@ reboot_required=false
 
 if [[ "$FORCE_REBOOT" == "true" ]]; then
   log warning "Forcing reboot; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
-  shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance"
+  run_step force-reboot shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance"
 elif [[ "$reboot_required" == "true" && "$AUTO_REBOOT" == "true" && $FAILURES -eq 0 ]]; then
   log warning "Reboot required; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
   shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance after updates"
