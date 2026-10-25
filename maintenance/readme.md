@@ -40,6 +40,34 @@ By default the script does not reboot the Pi; if a reboot is needed it logs a wa
    sudo systemctl enable --now pi-maintenance.timer
    ```
 
+## Updating the script on the target system
+
+systemd runs whatever is at `/opt/maintenance/pi-maintenance.sh` each time the timer fires, so updating means re-installing the file. Nothing needs restarting.
+
+1. Get the latest version of this repo onto the Pi (e.g. `git pull`) and change to this directory.
+
+2. Check the syntax and re-install the script:
+   ```bash
+   bash -n pi-maintenance.sh
+   sudo install -o root -g root -m 755 pi-maintenance.sh /opt/maintenance/pi-maintenance.sh
+   ```
+
+3. Only if `pi-maintenance.service` or `pi-maintenance.timer` changed, re-install them and reload systemd:
+   ```bash
+   sudo install -o root -g root -m 644 pi-maintenance.service /etc/systemd/system/pi-maintenance.service
+   sudo install -o root -g root -m 644 pi-maintenance.timer /etc/systemd/system/pi-maintenance.timer
+   sudo systemctl daemon-reload
+   sudo systemctl restart pi-maintenance.timer
+   ```
+
+4. Optionally test it. This performs real updates (and a reboot if `FORCE_REBOOT=true`):
+   ```bash
+   sudo systemctl start pi-maintenance.service
+   journalctl -u pi-maintenance.service -f
+   ```
+
+5. If a new option was added, set it in `/etc/default/pi-maintenance` (see [Configuration](#configuration)).
+
 ## Schedule
 
 The schedule is `OnCalendar=Sun *-*-* 03:00:00` in `pi-maintenance.timer` (system local time; check with `timedatectl`). `Persistent=true` means a run missed while the Pi was off happens at next boot.
@@ -77,6 +105,7 @@ Optional overrides go in `/etc/default/pi-maintenance` (read by the service) or 
 | `LOG_FILE` | `/var/log/pi-maintenance.log` | Local log file |
 | `AUTO_REBOOT` | `false` | Schedule a reboot after maintenance when updates require one |
 | `REBOOT_DELAY_MINUTES` | `2` | Minutes to wait before the scheduled reboot |
+| `FORCE_REBOOT` | `false` | Schedule a reboot at the end of every run, whether or not one is required |
 
 To enable automatic reboots, add to `/etc/default/pi-maintenance`:
 ```bash
@@ -84,7 +113,14 @@ AUTO_REBOOT=true
 REBOOT_DELAY_MINUTES=2
 ```
 
-Safeguard: a reboot is only scheduled when updates indicate a reboot is required (`/var/run/reboot-required` exists) and the maintenance run recorded no failed steps. Otherwise only a warning is logged.
+Reboot decisions are made once, at the very end of the run (after the OS updates **and** Docker steps), in this order:
+
+1. `FORCE_REBOOT=true`: a reboot is always scheduled, even if steps failed.
+2. `AUTO_REBOOT=true`, a reboot is required (`/var/run/reboot-required` exists) and no steps failed: a reboot is scheduled.
+3. A reboot is required but neither of the above applies: only a warning is logged.
+4. Otherwise nothing happens.
+
+The reboot is scheduled with `shutdown -r +REBOOT_DELAY_MINUTES`; cancel it with `sudo shutdown -c`.
 
 ## Viewing logs in Grafana
 
