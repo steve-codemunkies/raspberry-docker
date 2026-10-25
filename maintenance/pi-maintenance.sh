@@ -16,6 +16,7 @@ RECREATE_CONTAINERS="${RECREATE_CONTAINERS:-true}"   # run 'up -d' after pulling
 PRUNE_IMAGES="${PRUNE_IMAGES:-true}"                 # remove dangling images afterwards
 AUTO_REBOOT="${AUTO_REBOOT:-false}"                  # reboot after updates if one is required
 REBOOT_DELAY_MINUTES="${REBOOT_DELAY_MINUTES:-2}"    # delay before the scheduled reboot
+FORCE_REBOOT="${FORCE_REBOOT:-false}"                # reboot at the end of the script regardless of if one is required
 HOST_NAME="$(hostname)"
 FAILURES=0
 
@@ -85,15 +86,6 @@ run_step apt-download     apt-get "${APT_OPTS[@]}" --download-only upgrade
 run_step apt-upgrade      apt-get "${APT_OPTS[@]}" upgrade
 run_step apt-autoremove   apt-get "${APT_OPTS[@]}" autoremove --purge
 
-if [[ -f /var/run/reboot-required ]]; then
-  if [[ "$AUTO_REBOOT" == "true" && $FAILURES -eq 0 ]]; then
-    log warning "Reboot required; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
-    shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance after updates"
-  else
-    log warning "A reboot is required to finish applying updates (not rebooting automatically)."
-  fi
-fi
-
 # --- Docker images ----------------------------------------------------------
 if command -v docker >/dev/null 2>&1; then
   shopt -s nullglob
@@ -116,6 +108,19 @@ if command -v docker >/dev/null 2>&1; then
   fi
 else
   log warning "docker not found; skipping image updates"
+fi
+
+reboot_required=false
+[[ -f /var/run/reboot-required ]] && reboot_required=true
+
+if [[ "$FORCE_REBOOT" == "true" ]]; then
+  log warning "Forcing reboot; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
+  shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance"
+elif [[ "$reboot_required" == "true" && "$AUTO_REBOOT" == "true" && $FAILURES -eq 0 ]]; then
+  log warning "Reboot required; scheduling reboot in ${REBOOT_DELAY_MINUTES} minute(s)."
+  shutdown -r +"${REBOOT_DELAY_MINUTES}" "Scheduled by pi-maintenance after updates"
+elif [[ "$reboot_required" == "true" ]]; then
+  log warning "A reboot is required to finish applying updates (not rebooting automatically)."
 fi
 
 if [[ $FAILURES -eq 0 ]]; then
