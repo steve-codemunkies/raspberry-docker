@@ -1,0 +1,103 @@
+{
+  "__inputs": [
+    { "name": "DS_PROMETHEUS", "label": "Prometheus", "type": "datasource", "pluginId": "prometheus", "pluginName": "Prometheus" },
+    { "name": "DS_LOKI", "label": "Loki", "type": "datasource", "pluginId": "loki", "pluginName": "Loki" }
+  ],
+  "title": "ACME Certificates",
+  "uid": "acme-certificates",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "tags": ["acme", "certificates"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "ACME failures (last 24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "instant",
+          "expr": "sum(count_over_time({container=\"nginx-proxy-acme\"} |~ \"(?i)error add txt|verify error|sign failed|error\" [24h])) or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 2,
+      "type": "bargauge",
+      "title": "Days until certificate expiry",
+      "gridPos": { "h": 5, "w": 18, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "expr": "(probe_ssl_earliest_cert_expiry{job=\"blackbox-tls\"} - time()) / 86400"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "min": 0,
+          "max": 90,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 7 },
+              { "color": "yellow", "value": 14 },
+              { "color": "green", "value": 21 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "ACME error log lines",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({container=\"nginx-proxy-acme\"} |~ \"(?i)error add txt|verify error|sign failed|error\" [$__interval]))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars" } }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "ACME companion errors",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{container=\"nginx-proxy-acme\"} |~ \"(?i)error add txt|verify error|sign failed|error\""
+        }
+      ],
+      "options": { "sortOrder": "Descending", "wrapLogMessage": true }
+    }
+  ]
+}

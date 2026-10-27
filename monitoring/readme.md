@@ -5,6 +5,8 @@ This directory contains the configuration for a comprehensive network monitoring
 - Node Exporter (system metrics collection)
 - Grafana (visualization and dashboards)
 - Loki (log storage; receives logs from the [maintenance script](../maintenance/) and is queried from Grafana)
+- Alloy (ships `nginx-proxy-acme` container logs to Loki)
+- Blackbox Exporter (probes HTTPS hosts for certificate expiry)
 
 ## Setup Instructions
 
@@ -19,7 +21,7 @@ This directory contains the configuration for a comprehensive network monitoring
    ```bash
    sudo mkdir -p /opt/stacks/monitoring
    sudo cp docker-compose.yml .env /opt/stacks/monitoring/
-   sudo cp -r prometheus loki grafana /opt/stacks/monitoring/
+   sudo cp -r prometheus loki grafana alloy blackbox /opt/stacks/monitoring/
    ```
 
 4. Start the monitoring stack:
@@ -45,6 +47,13 @@ This directory contains the configuration for a comprehensive network monitoring
    - Access: Server (default)
 3. Import dashboard 1860 for Node Exporter metrics
 4. The Loki data source (http://loki:3100) is provisioned automatically. View logs under Explore > Loki, e.g. `{job="pi-maintenance"}`.
+
+## Certificate Monitoring
+
+1. Edit `prometheus/blackbox-targets.yml` and list the HTTPS hosts to probe.
+2. In Grafana choose Dashboards > New > Import and upload `grafana/dashboards/acme-certificates.json`, selecting the Prometheus and Loki data sources.
+
+The dashboard shows days until certificate expiry (Blackbox) and acme-companion error logs (Loki, via Alloy). Check the log regex against `docker logs nginx-proxy-acme` after a real failure and adjust the panels if the wording differs.
 
 ## Metrics Available
 
