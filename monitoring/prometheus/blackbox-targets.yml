@@ -1,0 +1,4 @@
+# Hosts whose certificate expiry is monitored; edit to match your VIRTUAL_HOST values.
+- targets:
+    - https://grafana.example.com
+    - https://prometheus.example.com

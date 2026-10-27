@@ -1,0 +1,31 @@
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "acme" {
+  targets = discovery.docker.containers.targets
+
+  // Keep only the acme-companion container (compose service name)
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "nginx-proxy-acme"
+    action        = "keep"
+  }
+
+  rule {
+    target_label = "container"
+    replacement  = "nginx-proxy-acme"
+  }
+}
+
+loki.source.docker "acme" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.acme.output
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
